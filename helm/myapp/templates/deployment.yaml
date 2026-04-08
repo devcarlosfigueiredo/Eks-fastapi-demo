@@ -1,0 +1,84 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "myapp.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "myapp.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "myapp.selectorLabels" . | nindent 6 }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0        # zero-downtime deploys
+  template:
+    metadata:
+      labels:
+        {{- include "myapp.selectorLabels" . | nindent 8 }}
+      annotations:
+        # Force pod restart on configmap change
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: {{ include "myapp.fullname" . }}-config
+          env:
+            - name: APP_VERSION
+              value: {{ .Values.env.APP_VERSION | quote }}
+            - name: ENVIRONMENT
+              value: {{ .Values.env.ENVIRONMENT | quote }}
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp               # writeable dir for read-only rootfs
+      volumes:
+        - name: tmp
+          emptyDir: {}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

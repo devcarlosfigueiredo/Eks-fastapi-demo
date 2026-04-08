@@ -1,0 +1,23 @@
+# Copy this file to terraform.tfvars and fill in your values
+# NEVER commit terraform.tfvars — it is in .gitignore
+
+aws_region         = "eu-west-1"
+cluster_name       = "eks-fastapi-demo"
+kubernetes_version = "1.30"
+environment        = "production"
+
+# From vpc module outputs
+vpc_id             = "vpc-xxxxxxxx"
+private_subnet_ids = ["subnet-aaa", "subnet-bbb", "subnet-ccc"]
+
+# IAM Role ARN created for GitHub Actions OIDC
+github_actions_role_arn = "arn:aws:iam::123456789012:role/eks-fastapi-github-actions"
+
+# Node group
+node_instance_types = ["t3.micro"]
+node_min_size       = 2
+node_max_size       = 6
+node_desired_size   = 2
+
+# Application namespace
+app_namespace = "myapp-production"

@@ -1,0 +1,101 @@
+# ─── Default values (dev / staging) ─────────────────────────────────────────
+replicaCount: 2
+
+image:
+  repository: ""          # set via --set or values-prod.yaml
+  tag: "latest"
+  pullPolicy: Always
+
+serviceAccount:
+  create: true
+  name: fastapi-sa
+  annotations: {}         # IRSA ARN injected in CI/CD
+
+nameOverride: ""
+fullnameOverride: ""
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8000
+
+ingress:
+  enabled: true
+  className: alb
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/healthcheck-path: /health
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: "15"
+    alb.ingress.kubernetes.io/healthy-threshold-count: "2"
+    alb.ingress.kubernetes.io/unhealthy-threshold-count: "3"
+  hosts:
+    - host: ""
+      paths:
+        - path: /
+          pathType: Prefix
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8000
+  initialDelaySeconds: 10
+  periodSeconds: 15
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /ready
+    port: 8000
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  failureThreshold: 3
+
+env:
+  ENVIRONMENT: "development"
+  APP_VERSION: "1.0.0"
+
+configmap:
+  LOG_LEVEL: "info"
+  WORKERS: "2"
+
+podAnnotations: {}
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  fsGroup: 10001
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+nodeSelector: {}
+tolerations: []
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values: ["myapp"]
+          topologyKey: kubernetes.io/hostname

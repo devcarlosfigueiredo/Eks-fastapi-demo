@@ -1,0 +1,14 @@
+apiVersion: v2
+name: myapp
+description: Production-grade FastAPI on Amazon EKS
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+maintainers:
+  - name: Carlos Figueiredo
+    url: https://github.com/devcarlosfigueiredo
+keywords:
+  - fastapi
+  - eks
+  - aws
+  - python
